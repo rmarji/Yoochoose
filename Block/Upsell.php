@@ -37,6 +37,7 @@ class AvS_Yoochoose_Block_Upsell extends Mage_Catalog_Block_Product_List_Upsell
                 return $this->_itemArray;
             }
 
+
             // check if the manual products are less than the max products defined
             if (count($this->_itemArray) < $api->getMaxNumberProducts()) {
             	// get the scenario which isnt necessary in our case
