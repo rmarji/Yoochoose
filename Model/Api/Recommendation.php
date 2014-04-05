@@ -48,16 +48,7 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 
 		$url = $this -> _getRecommendationBaseUrlSR($scenario);
 
-		//$params = $this->_getRecommendationUrlParams($maxCount);
-
-		$tenantId = Mage::getStoreConfig('yoochoose/api/client_id');
-		$apiKey = Mage::getStoreConfig('yoochoose/api/license_key');
-
-		//TODO: change the item id to get it from the current page or from the total
-
-		$params = array('numberOfResults' => min(10, $maxCount),
-		//'apikey' => '62ffa549a74ba0eea4e7502c48e54c13',
-		'apikey' => $apiKey, 'tenantid' => $tenantId, 'itemid' => '42', );
+		$params = $this -> _getRecommendationUrlParamsSR($maxCount);
 
 		try {
 			$rawResponse = Mage::helper('yoochoose') -> _getHttpPage($url, $params);
@@ -80,8 +71,8 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 			return array();
 		}
 
-		return $this -> _getRecommendedProductsArrayDummy();
-
+		// for some reason nothing works return an empty array
+		return array();
 	}
 
 	/**
@@ -113,6 +104,7 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 	protected function _getRecommendedProductsArraySR($response) {
 
 		$responseArray = $response['recommendeditems']['item'];
+		// TODO: custom option to choose how to order the recs generated.
 		//$responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
 		//print_r($responseArray);
 		$recommendedProductsArray = array();
@@ -130,6 +122,11 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 		return $recommendedProductsArray;
 	}
 
+	/**
+	 * return an array of products for testing
+	 *
+	 * @return array
+	 */
 	protected function _getRecommendedProductsArrayDummy() {
 		// $responseArray = $response['recommendationResponseList'];
 		// $responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
@@ -137,17 +134,13 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 		$recommendedProductsArray = array();
 		$dummyData = array(159, 160, 161);
 		foreach ($dummyData as $singleRecommendation) {
-
 			if ($singleRecommendation) {
-
 				$product = Mage::getModel('catalog/product') -> load($singleRecommendation);
 				if ($product -> getId()) {
-
 					$recommendedProductsArray[] = $product;
 				}
 			}
 		}
-
 		return $recommendedProductsArray;
 	}
 
@@ -190,7 +183,16 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 	}
 
 	protected function _getRecommendationUrlParamsSR($maxCount) {
-		return array('requesteditemtype' => $this -> _getCategoryPath(), 'numberOfResults' => min(10, $maxCount), );
+		$tenantId = Mage::getStoreConfig('yoochoose/api/client_id');
+		$apiKey = Mage::getStoreConfig('yoochoose/api/license_key');
+
+		//TODO: change the item id to get it from the current page or from the total
+
+		$params = array('numberOfResults' => min(10, $maxCount),
+		//'apikey' => '62ffa549a74ba0eea4e7502c48e54c13',
+		'apikey' => $apiKey, 'tenantid' => $tenantId, 'itemid' => '42', 'requesteditemtype' => $this -> _getCategoryPath(), 'numberOfResults' => min(10, $maxCount), );
+
+		return $params;
 	}
 
 	/**
