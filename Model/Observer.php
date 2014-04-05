@@ -3,7 +3,7 @@
 /**
  * @category   AvS
  * @package    AvS_Yoochoose
- * @author     Andreas von Studnitz <avs@avs-webentwicklung.de>
+ * @author     Raed (Thunder) Marji <raed@raed@jogeeks.com>
  */
 
 class AvS_Yoochoose_Model_Observer
@@ -55,7 +55,7 @@ class AvS_Yoochoose_Model_Observer
         $this->_displayMessage($licenseType);
 
         if ($licenseType != Mage::getStoreConfig('yoochoose/api/license_type')) {
-            $this->_setConfigData('yoochoose/api/license_type', $licenseType);
+            Mage::helper('yoochoose') ->setConfigData('yoochoose/api/license_type', $licenseType);
         }
     }
 
@@ -110,7 +110,7 @@ class AvS_Yoochoose_Model_Observer
 
         $statsHtml = $this->_generateStatsHtml($stats);
         if ($statsHtml) {
-            $this->_setConfigData('yoochoose/general/stats', $statsHtml);
+            Mage::helper('yoochoose') ->setConfigData('yoochoose/general/stats', $statsHtml);
         }
 
         return $statsHtml;
@@ -220,14 +220,14 @@ class AvS_Yoochoose_Model_Observer
 	 * @param string $configPath
 	 * @param string $value
 	 */
-    protected function _setConfigData($configPath, $value)
+    /*protected function _setConfigData($configPath, $value)
     {
         $setup = new Mage_Core_Model_Resource_Setup('core_setup');
         $setup->startSetup();
         $setup->setConfigData($configPath, $value);
         $setup->endSetup();
         Mage::getSingleton('core/config')->reinit();
-    }
+    }*/
 
 	/**
 	 *  Observer Function that activiates on product view to register the view with the API

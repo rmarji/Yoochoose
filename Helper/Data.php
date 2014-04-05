@@ -255,4 +255,19 @@ class AvS_Yoochoose_Helper_Data extends Mage_Core_Helper_Abstract
         $params = array('_query' => array('recommended' => 1));
         return $product->getUrlModel()->getUrl($product, $params);
     }
+    
+    /**
+     * Saves $value in store config based on $configPath
+     *
+     * @param string $configPath
+     * @param string $value
+     */
+    public function setConfigData($configPath, $value) {
+        $setup = new Mage_Core_Model_Resource_Setup('core_setup');
+        $setup -> startSetup();
+        $setup -> setConfigData($configPath, $value);
+        $setup -> endSetup();
+        Mage::getSingleton('core/config') -> reinit();
+    }
+    
 }

@@ -3,8 +3,9 @@
 /**
  * @category   AvS
  * @package    AvS_Yoochoose
- * @author     Andreas von Studnitz <avs@avs-webentwicklung.de>
+ * @author     Raed (Thunder) Marji <raed@raed@jogeeks.com>
  */
+
 
 class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 
@@ -38,7 +39,7 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
                 Mage::log('its ' . $response['error']['@code'], null, 'custom.log', true);
                 // TODO: check if its already disabled
                 // TODO maybe do a cron job to check if the license is valid every hours
-                $this -> _setConfigData('yoochoose/api/license_type', 'No More Actions This Month');
+                Mage::helper('yoochoose') ->setConfigData('yoochoose/api/license_type', 'No More Actions This Month');
             } else {
                 //print_r($response);
                 // Parse the response to get the products in form of an array
