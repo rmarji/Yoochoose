@@ -8,248 +8,220 @@
 
 class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 
-	const SCENARIO_CROSS_SELLING = 'cross_selling';
-	const SCENARIO_RELATED_PRODUCTS = 'related_products';
-	const SCENARIO_UP_SELLING = 'up_selling';
+    // TODO see what we can about these
+    const SCENARIO_CROSS_SELLING = 'cross_selling';
+    const SCENARIO_RELATED_PRODUCTS = 'related_products';
+    const SCENARIO_UP_SELLING = 'up_selling';
 
-	protected $_recommendedProductIds = array();
-	protected $_numberProducts = 10;
+    protected $_recommendedProductIds = array();
+    protected $_numberProducts = 10;
 
-	/**
-	 * Get Product Recommendations based on Client Id and License Key
-	 *
-	 * @param int $maxCount
-	 * @return array
-	 */
-	public function getRecommendedProducts($scenario, $maxCount = 10) {
+    /**
+     * Get Product Recommendations based on Client Id and License Key
+     *
+     * @param int $maxCount
+     * @return array
+     */
+    public function getRecommendedProductsSR($scenario, $maxCount = 10) {
+    
+        // The url that we want to get recs from
+        $url = $this -> _getRecommendationBaseUrlSR($scenario);
+        // Filter the recs by these params
+        $params = $this -> _getRecommendationUrlParamsSR($maxCount);
+        // try to contact the server and get the rec based on the criteria and url
+        try {
+            $rawResponse = Mage::helper('yoochoose') -> _getHttpPage($url, $params);
+            $response = Zend_Json::decode($rawResponse);
+            Mage::log($response, null, 'custom.log', true);
+            // if the limit has been reached then return with nothing
+            if ($response['error']['@code'] == "909") {
+                Mage::log('its ' . $response['error']['@code'], null, 'custom.log', true);
+                // TODO: check if its already disabled
+                // TODO maybe do a cron job to check if the license is valid every hours
+                $this -> _setConfigData('yoochoose/api/license_type', 'No More Actions This Month');
+            } else {
+                //print_r($response);
+                // Parse the response to get the products in form of an array
+                return $this -> _getRecommendedProductsArraySR($response);
+            }
+        } catch(Exception $e) {
+            echo 'error';
+            Mage::logException($e);
+            // authentication failed
+            return array();
+        }
 
-		/*
-		 $url = $this->_getRecommendationBaseUrl($scenario);
-		 $params = $this->_getRecommendationUrlParams($maxCount);
+        // for some reason nothing works return an empty array
+        return array();
+    }
 
-		 try {
-		 $rawResponse = Mage::helper('yoochoose')->_getHttpPage($url, $params);
-		 $response = Zend_Json::decode($rawResponse);
+    /**
+     * Transform Response Array to Array of Products
+     *
+     * @param array $response
+     * @return array
+     */
+    protected function _getRecommendedProductsArraySR($response) {
 
-		 return $this->_getRecommendedProductsArray($response);
-		 }
-		 catch(Exception $e) {
+        $responseArray = $response['recommendeditems']['item'];
+        // TODO: custom option to choose how to order the recs generated.
+        //$responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
+        //print_r($responseArray);
+        $recommendedProductsArray = array();
+        foreach ($responseArray as $singleRecommendation) {
 
-		 Mage::logException($e);
-		 // authentication failed
-		 return array();
-		 }
-		 */
-		return $this -> _getRecommendedProductsArrayDummy();
+            if ($singleRecommendation['item'] == 1 || TRUE) {
 
-	}
+                $product = Mage::getModel('catalog/product') -> load($singleRecommendation['id']);
+                if ($product -> getId()) {
+                    $recommendedProductsArray[] = $product;
+                }
+            }
+        }
 
-	public function getRecommendedProductsSR($scenario, $maxCount = 10) {
+        return $recommendedProductsArray;
+    }
 
-		$url = $this -> _getRecommendationBaseUrlSR($scenario);
+    protected function _getRecommendedProductsArray($response) {
+        $responseArray = $response['recommendationResponseList'];
+        $responseArray = Mage::helper('yoochoose') -> getArraySortedBySubkey($responseArray, 'relevance');
 
-		$params = $this -> _getRecommendationUrlParamsSR($maxCount);
+        $recommendedProductsArray = array();
+        foreach ($responseArray as $singleRecommendation) {
 
-		try {
-			$rawResponse = Mage::helper('yoochoose') -> _getHttpPage($url, $params);
-			$response = Zend_Json::decode($rawResponse);
-			Mage::log($response, null, 'custom.log', true);
+            if ($singleRecommendation['itemType'] == 1) {
 
-			if ($response['error']['@code'] == "909") {
-				Mage::log('its ' . $response['error']['@code'], null, 'custom.log', true);
-				// TODO: check if its already disabled
-				// TODO maybe do a cron job to check if the license is valid every hours
-				$this -> _setConfigData('yoochoose/api/license_type', 'No More Actions This Month');
-			} else {
-				//print_r($response);
-				return $this -> _getRecommendedProductsArraySR($response);
-			}
-		} catch(Exception $e) {
-			echo 'error';
-			Mage::logException($e);
-			// authentication failed
-			return array();
-		}
+                $product = Mage::getModel('catalog/product') -> load($singleRecommendation['itemId']);
+                if ($product -> getId()) {
 
-		// for some reason nothing works return an empty array
-		return array();
-	}
+                    $recommendedProductsArray[] = $product;
+                }
+            }
+        }
 
-	/**
-	 * Transform Response Array to Array of Products
-	 *
-	 * @param array $response
-	 * @return array
-	 */
-	protected function _getRecommendedProductsArray($response) {
-		$responseArray = $response['recommendationResponseList'];
-		$responseArray = Mage::helper('yoochoose') -> getArraySortedBySubkey($responseArray, 'relevance');
+        return $recommendedProductsArray;
+    }
 
-		$recommendedProductsArray = array();
-		foreach ($responseArray as $singleRecommendation) {
+    /**
+     * return an array of products for testing
+     *
+     * @return array
+     */
+    protected function _getRecommendedProductsArrayDummy() {
+        // $responseArray = $response['recommendationResponseList'];
+        // $responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
 
-			if ($singleRecommendation['itemType'] == 1) {
+        $recommendedProductsArray = array();
+        $dummyData = array(159, 160, 161);
+        foreach ($dummyData as $singleRecommendation) {
+            if ($singleRecommendation) {
+                $product = Mage::getModel('catalog/product') -> load($singleRecommendation);
+                if ($product -> getId()) {
+                    $recommendedProductsArray[] = $product;
+                }
+            }
+        }
+        return $recommendedProductsArray;
+    }
 
-				$product = Mage::getModel('catalog/product') -> load($singleRecommendation['itemId']);
-				if ($product -> getId()) {
+    /*	protected function _getRecommendationBaseUrl($scenario) {
+     $url = self::YOOCHOOSE_RECOMMENDATION_URL;
+     $path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
 
-					$recommendedProductsArray[] = $product;
-				}
-			}
-		}
+     return $url . implode('/', $path);
+     }
+     */
 
-		return $recommendedProductsArray;
-	}
+    /**
+     * Generate Base Url for Recommendation Request
+     *
+     * @param string $scenario
+     * @return string
+     */
+    protected function _getRecommendationBaseUrlSR($scenario) {
+        $url = self::SR_API_BASE_URL;
+        //$path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
+        $path = $url . $scenario;
 
-	protected function _getRecommendedProductsArraySR($response) {
+        return $path;
+    }
 
-		$responseArray = $response['recommendeditems']['item'];
-		// TODO: custom option to choose how to order the recs generated.
-		//$responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
-		//print_r($responseArray);
-		$recommendedProductsArray = array();
-		foreach ($responseArray as $singleRecommendation) {
+    /**
+     * Generate Parameters for Recommendation URL
+     *
+     * @param int $maxCount
+     * @return array
+     */
+    protected function _getRecommendationUrlParamsSR($maxCount) {
+        $tenantId = Mage::getStoreConfig('yoochoose/api/client_id');
+        $apiKey = Mage::getStoreConfig('yoochoose/api/license_key');
+        $itemType = $this -> _getCategoryPath();
+        
+        $product = Mage::registry('product');
+        $itemId = $product -> getId();
 
-			if ($singleRecommendation['item'] == 1 || TRUE) {
+        //TODO: change the item id to get it from the current page or from the total
+        $params = array('itemid' => $itemId, 'numberOfResults' => min(10, $maxCount),
+        //'apikey' => '62ffa549a74ba0eea4e7502c48e54c13',
+        'apikey' => $apiKey, 'tenantid' => $tenantId, 'requesteditemtype' => $itemType, 'numberOfResults' => min(10, $maxCount), );
 
-				$product = Mage::getModel('catalog/product') -> load($singleRecommendation['id']);
-				if ($product -> getId()) {
-					$recommendedProductsArray[] = $product;
-				}
-			}
-		}
+        return $params;
+    }
 
-		return $recommendedProductsArray;
-	}
+    /**
+     * Merge two array of products; don't add duplicates
+     *
+     * @param array $itemArray1
+     * @param array $itemArray2
+     * @return array
+     */
+    public function mergeItemArrays($itemArray1, $itemArray2) {
+        foreach ($itemArray2 as $item) {
+            // check this item is not already in the recommended products ids
+            if (!in_array($item -> getId(), $this -> _recommendedProductIds)) {
+                // add the item to the final list
+                $itemArray1[] = $item;
+                // if we reached the limit we need we can stop looking
+                if (count($itemArray1) >= $this -> getMaxNumberProducts()) {
+                    break;
+                }
+            }
+        }
+        return $itemArray1;
+    }
 
-	/**
-	 * return an array of products for testing
-	 *
-	 * @return array
-	 */
-	protected function _getRecommendedProductsArrayDummy() {
-		// $responseArray = $response['recommendationResponseList'];
-		// $responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
+    /**
+     * Gets configured maximum number of recommended products
+     *
+     * @return int
+     */
+    public function getMaxNumberProducts() {
+        return $this -> _numberProducts;
+    }
 
-		$recommendedProductsArray = array();
-		$dummyData = array(159, 160, 161);
-		foreach ($dummyData as $singleRecommendation) {
-			if ($singleRecommendation) {
-				$product = Mage::getModel('catalog/product') -> load($singleRecommendation);
-				if ($product -> getId()) {
-					$recommendedProductsArray[] = $product;
-				}
-			}
-		}
-		return $recommendedProductsArray;
-	}
+    /**
+     * Gets configured maximum number of recommended products
+     *
+     * @return int
+     */
+    public function setMaxNumberProducts($numberProducts) {
+        $this -> _numberProducts = $numberProducts;
+    }
 
-	/**
-	 * Generate Base Url for Recommendation Request
-	 *
-	 * @param string $scenario
-	 * @return string
-	 */
-	/*	protected function _getRecommendationBaseUrl($scenario) {
-	 $url = self::YOOCHOOSE_RECOMMENDATION_URL;
-	 $path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
+    /**
+     * Converts item collection to array
+     *
+     * @return array
+     */
+    public function getArrayFromItemCollection($itemCollection) {
+        $itemArray = array();
+        foreach ($itemCollection as $item) {
 
-	 return $url . implode('/', $path);
-	 }
-	 */
+            $itemArray[] = $item;
+            $this -> _recommendedProductIds[] = $item -> getId();
+        }
 
-	/**
-	 * Generate Base Url for Recommendation Request
-	 *
-	 * @param string $scenario
-	 * @return string
-	 */
-	protected function _getRecommendationBaseUrlSR($scenario) {
-		$url = self::SR_API_BASE_URL;
-		//$path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
-		$path = $url . $scenario;
-
-		return $path;
-	}
-
-	/**
-	 * Generate Parameters for Recommendation URL
-	 *
-	 * @param int $maxCount
-	 * @return array
-	 */
-	protected function _getRecommendationUrlParams($maxCount) {
-		return array('categoryPath' => $this -> _getCategoryPath(), 'recnum' => min(10, $maxCount), );
-	}
-
-	protected function _getRecommendationUrlParamsSR($maxCount) {
-		$tenantId = Mage::getStoreConfig('yoochoose/api/client_id');
-		$apiKey = Mage::getStoreConfig('yoochoose/api/license_key');
-
-		//TODO: change the item id to get it from the current page or from the total
-
-		$params = array('numberOfResults' => min(10, $maxCount),
-		//'apikey' => '62ffa549a74ba0eea4e7502c48e54c13',
-		'apikey' => $apiKey, 'tenantid' => $tenantId, 'itemid' => '42', 'requesteditemtype' => $this -> _getCategoryPath(), 'numberOfResults' => min(10, $maxCount), );
-
-		return $params;
-	}
-
-	/**
-	 * Merge two array of products; don't add duplicates
-	 *
-	 * @param array $itemArray1
-	 * @param array $itemArray2
-	 * @return array
-	 */
-	public function mergeItemArrays($itemArray1, $itemArray2) {
-		foreach ($itemArray2 as $item) {
-
-			if (!in_array($item -> getId(), $this -> _recommendedProductIds)) {
-
-				$itemArray1[] = $item;
-
-				if (count($itemArray1) >= $this -> getMaxNumberProducts()) {
-					break;
-				}
-			}
-		}
-
-		return $itemArray1;
-	}
-
-	/**
-	 * Gets configured maximum number of recommended products
-	 *
-	 * @return int
-	 */
-	public function getMaxNumberProducts() {
-		return $this -> _numberProducts;
-	}
-
-	/**
-	 * Gets configured maximum number of recommended products
-	 *
-	 * @return int
-	 */
-	public function setMaxNumberProducts($numberProducts) {
-		$this -> _numberProducts = $numberProducts;
-	}
-
-	/**
-	 * Converts item collection to array
-	 *
-	 * @return array
-	 */
-	public function getArrayFromItemCollection($itemCollection) {
-		$itemArray = array();
-		foreach ($itemCollection as $item) {
-
-			$itemArray[] = $item;
-			$this -> _recommendedProductIds[] = $item -> getId();
-		}
-
-		return $itemArray;
-	}
+        return $itemArray;
+    }
 
 }

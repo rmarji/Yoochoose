@@ -19,6 +19,13 @@ class AvS_Yoochoose_Helper_Data extends Mage_Core_Helper_Abstract
             && Mage::getStoreConfig('yoochoose/api/license_type');*/
             return true;
     }
+    
+    //TODO: make sure this is good
+    public function isEnabled()
+    {
+        return
+            !Mage::getStoreConfig('yoochoose/general/disabled');
+    }
 
     /**
      * Return Customer Session

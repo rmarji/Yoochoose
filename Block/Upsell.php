@@ -32,7 +32,7 @@ class AvS_Yoochoose_Block_Upsell extends Mage_Catalog_Block_Product_List_Upsell
             }
 
 			// checks id the plugin is active and if the user has a valid license.
-           	//TODO: keep it commented untill I fix it in the helper 
+           	//TODO: fix it in the helper when we build a custom function for retrieving the api limit
            	/*if (!Mage::helper('yoochoose')->isActive()) {
                 return $this->_itemArray;
             }
@@ -40,8 +40,7 @@ class AvS_Yoochoose_Block_Upsell extends Mage_Catalog_Block_Product_List_Upsell
 
             // check if the manual products are less than the max products defined
             if (count($this->_itemArray) < $api->getMaxNumberProducts()) {
-            	// get the scenario which isnt necessary in our case
-            	// TODO: check if we need to keep this.
+            	// get the scenario
                 $scenario = Mage::getStoreConfig('yoochoose/upselling/scenario');
 				// merge the manualy added products with the recommendations
                 $this->_itemArray = $api->mergeItemArrays(
