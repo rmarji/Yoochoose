@@ -33,10 +33,10 @@ class AvS_Yoochoose_Block_Upsell extends Mage_Catalog_Block_Product_List_Upsell
 
 			// checks id the plugin is active and if the user has a valid license.
            	//TODO: keep it commented untill I fix it in the helper 
-           	if (!Mage::helper('yoochoose')->isActive()) {
+           	/*if (!Mage::helper('yoochoose')->isActive()) {
                 return $this->_itemArray;
             }
-
+			*/
 
             // check if the manual products are less than the max products defined
             if (count($this->_itemArray) < $api->getMaxNumberProducts()) {

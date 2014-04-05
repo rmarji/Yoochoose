@@ -7,7 +7,7 @@
  */
 
 class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
-		
+
 	const SCENARIO_CROSS_SELLING = 'cross_selling';
 	const SCENARIO_RELATED_PRODUCTS = 'related_products';
 	const SCENARIO_UP_SELLING = 'up_selling';
@@ -46,24 +46,33 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 
 	public function getRecommendedProductsSR($scenario, $maxCount = 10) {
 
-		//$url = $this->_getRecommendationBaseUrl($scenario);
-		$url = $this->_getRecommendationBaseUrlSR($scenario);
+		$url = $this -> _getRecommendationBaseUrlSR($scenario);
 
-		//$params = '';//$this->_getRecommendationUrlParams($maxCount);
-		$params = array( 
-		 'numberOfResults' => min(10, $maxCount), 
-		 'apikey' => '62ffa549a74ba0eea4e7502c48e54c13', 
-		 'tenantid' => 'EASYREC_DEMO', 'itemid'=>'42',);
+		//$params = $this->_getRecommendationUrlParams($maxCount);
+
+		$tenantId = Mage::getStoreConfig('yoochoose/api/client_id');
+		$apiKey = Mage::getStoreConfig('yoochoose/api/license_key');
+
+		//TODO: change the item id to get it from the current page or from the total
+
+		$params = array('numberOfResults' => min(10, $maxCount),
+		//'apikey' => '62ffa549a74ba0eea4e7502c48e54c13',
+		'apikey' => $apiKey, 'tenantid' => $tenantId, 'itemid' => '42', );
 
 		try {
 			$rawResponse = Mage::helper('yoochoose') -> _getHttpPage($url, $params);
 			$response = Zend_Json::decode($rawResponse);
-			Mage::log($response,null,'custom.log',true);
-			
-			//print_r($response);
-			return $this -> _getRecommendedProductsArraySR($response);
-			
+			Mage::log($response, null, 'custom.log', true);
 
+			if ($response['error']['@code'] == "909") {
+				Mage::log('its ' . $response['error']['@code'], null, 'custom.log', true);
+				// TODO: check if its already disabled
+				// TODO maybe do a cron job to check if the license is valid every hours
+				$this -> _setConfigData('yoochoose/api/license_type', 'No More Actions This Month');
+			} else {
+				//print_r($response);
+				return $this -> _getRecommendedProductsArraySR($response);
+			}
 		} catch(Exception $e) {
 			echo 'error';
 			Mage::logException($e);
@@ -102,6 +111,7 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 	}
 
 	protected function _getRecommendedProductsArraySR($response) {
+
 		$responseArray = $response['recommendeditems']['item'];
 		//$responseArray = Mage::helper('yoochoose')->getArraySortedBySubkey($responseArray, 'relevance');
 		//print_r($responseArray);
@@ -147,16 +157,15 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 	 * @param string $scenario
 	 * @return string
 	 */
-/*	protected function _getRecommendationBaseUrl($scenario) {
-		$url = self::YOOCHOOSE_RECOMMENDATION_URL;
-		$path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
+	/*	protected function _getRecommendationBaseUrl($scenario) {
+	 $url = self::YOOCHOOSE_RECOMMENDATION_URL;
+	 $path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
 
-		return $url . implode('/', $path);
-	}
-	*/
-	
-	 
-	 /**
+	 return $url . implode('/', $path);
+	 }
+	 */
+
+	/**
 	 * Generate Base Url for Recommendation Request
 	 *
 	 * @param string $scenario
@@ -165,7 +174,7 @@ class AvS_Yoochoose_Model_Api_Recommendation extends AvS_Yoochoose_Model_Api {
 	protected function _getRecommendationBaseUrlSR($scenario) {
 		$url = self::SR_API_BASE_URL;
 		//$path = array(self::PRODUCT_ID, self::EVENT_TYPE_RECOMMENDATION, Mage::getStoreConfig('yoochoose/api/client_id'), $this -> _getUserId(), $scenario . '.json', );
-		$path = $url.$scenario;
+		$path = $url . $scenario;
 
 		return $path;
 	}
